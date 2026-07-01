@@ -1,0 +1,19 @@
+{
+  "name": "@tabterm/module-host",
+  "version": "0.8.0",
+  "description": "Type-only host contract for tabterm modules. Vendored snapshot from tabterm packages/module-host.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./react": "./src/react.ts",
+    "./server": "./src/server.ts"
+  },
+  "peerDependencies": {
+    "react": "*"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true }
+  }
+}
