@@ -22,10 +22,12 @@
   },
   "devDependencies": {
     "@tabterm/module-host": "file:./vendor/module-host",
+    "@tailwindcss/cli": "^4.3.1",
     "@types/bun": "^1.3.14",
     "@types/react": "^18.3.31",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "tailwindcss": "^4.3.1",
     "typescript": "^5.9.3"
   }
 }
