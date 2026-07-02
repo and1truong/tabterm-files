@@ -1,6 +1,6 @@
 {
   "name": "@tabterm/module-files",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "tabterm files module — a file explorer: lazy directory tree, multi-tab preview pane (syntax-highlighted code, rendered markdown, inline images, sandboxed HTML), and right-click create/rename/delete. Extracted from the tabterm monorepo.",
