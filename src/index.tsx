@@ -509,7 +509,80 @@ interface Preview { name: string; path: string; content: string | null; note: st
 function isImage(name: string): boolean { return /\.(png|jpe?g|gif|webp|svg|bmp|avif|ico)$/i.test(name); }
 function isMarkdown(name: string): boolean { return /\.(md|markdown|mdown|mkd)$/i.test(name); }
 function isHtml(name: string): boolean { return /\.html?$/i.test(name); }
+export function isCsv(name: string): boolean { return /\.csv$/i.test(name); }
 type HtmlViewMode = "preview" | "source";
+
+// RFC 4180-style CSV parser: quoted fields may contain commas, newlines, and
+// escaped quotes (""). Keep it dependency-free because this module ships as a
+// standalone browser bundle.
+export function parseCsv(input: string): string[][] {
+  const text = input.charCodeAt(0) === 0xfeff ? input.slice(1) : input;
+  if (!text) return [];
+
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let quoted = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (quoted) {
+      if (char === '"') {
+        if (text[i + 1] === '"') { field += '"'; i += 1; }
+        else quoted = false;
+      } else field += char;
+      continue;
+    }
+    if (char === '"' && field.length === 0) { quoted = true; continue; }
+    if (char === ",") { row.push(field); field = ""; continue; }
+    if (char === "\n" || char === "\r") {
+      if (char === "\r" && text[i + 1] === "\n") i += 1;
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+      continue;
+    }
+    field += char;
+  }
+  if (field.length > 0 || row.length > 0) rows.push([...row, field]);
+  return rows;
+}
+
+function CsvView({ content }: { content: string }) {
+  const rows = useMemo(() => parseCsv(content), [content]);
+  const columnCount = useMemo(() => Math.max(0, ...rows.map((row) => row.length)), [rows]);
+  if (rows.length === 0 || columnCount === 0) {
+    return <div className="h-full grid place-items-center text-sm text-[var(--faint)]">This CSV file is empty.</div>;
+  }
+
+  const headers = Array.from({ length: columnCount }, (_, i) => rows[0][i] || `Column ${i + 1}`);
+  const body = rows.slice(1);
+  const visibleRows = body.slice(0, 1_000);
+  return (
+    <div className="h-full overflow-auto">
+      <table className="min-w-full w-max border-collapse text-left text-[12.5px]">
+        <thead className="sticky top-0 z-10 bg-[var(--panel)] text-[var(--muted)]">
+          <tr>
+            <th scope="col" className="sticky left-0 z-20 border-b border-r border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-right font-medium">#</th>
+            {headers.map((header, i) => <th key={`${header}-${i}`} scope="col" className="border-b border-[var(--border)] px-3 py-2 font-semibold whitespace-nowrap">{header}</th>)}
+          </tr>
+        </thead>
+        <tbody className="mono text-[12px] text-[var(--text)]">
+          {visibleRows.map((row, rowIndex) => (
+            <tr key={rowIndex} className="hover:bg-[var(--hover)]">
+              <td className="sticky left-0 bg-[var(--panel)] border-r border-[var(--border)] px-3 py-1.5 text-right select-none text-[var(--faint)]">{rowIndex + 1}</td>
+              {headers.map((_, columnIndex) => <td key={columnIndex} className="border-b border-[var(--border)] px-3 py-1.5 whitespace-pre-wrap align-top">{row[columnIndex] ?? ""}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="sticky left-0 bottom-0 border-t border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-[11px] text-[var(--faint)]">
+        {body.length.toLocaleString()} rows × {columnCount} columns{body.length > visibleRows.length ? ` · showing first ${visibleRows.length.toLocaleString()} rows` : ""}
+      </div>
+    </div>
+  );
+}
 
 const EXT_LANG: Record<string, string> = {
   ts: "typescript", tsx: "typescript", mts: "typescript", cts: "typescript",
@@ -611,7 +684,7 @@ function PreviewPane({ preview, onRefresh, htmlMode, onHtmlModeChange }: {
   preview: Preview | null; onRefresh?: () => void; htmlMode?: HtmlViewMode; onHtmlModeChange?: (m: HtmlViewMode) => void;
 }) {
   const highlighted = useMemo(() => {
-    if (!preview || preview.content === null || isMarkdown(preview.name)) return null;
+    if (!preview || preview.content === null || isMarkdown(preview.name) || isCsv(preview.name)) return null;
     const lang = langFor(preview.name);
     if (lang && hljs.getLanguage(lang)) {
       try { return hljs.highlight(preview.content, { language: lang }).value; } catch { return null; }
@@ -670,6 +743,8 @@ function PreviewPane({ preview, onRefresh, htmlMode, onHtmlModeChange }: {
           <iframe src={rawUrl(preview.path)} title={preview.name} sandbox="allow-scripts" className="w-full h-full border-0 bg-white" />
         ) : preview.content === null ? (
           <div className="px-4 py-6 text-sm text-[var(--muted)]">{preview.note}</div>
+        ) : isCsv(preview.name) ? (
+          <CsvView content={preview.content} />
         ) : mdHtml != null ? (
           <div ref={mdRef} className="md-body h-full overflow-auto px-5 py-4 text-[13px] text-[var(--text)]" dangerouslySetInnerHTML={{ __html: mdHtml }} />
         ) : highlighted ? (

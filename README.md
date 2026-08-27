@@ -6,8 +6,8 @@ The **files** module for [tabterm](https://github.com/and1truong/tabterm) — a 
 - **Tree** — a lazy directory tree rooted at the active workspace's cwd; expand folders on
   demand, toggle hidden files, search, and right-click to create / rename / delete.
 - **Preview** — a multi-tab preview pane: syntax-highlighted code (`highlight.js`), rendered
-  markdown (`marked`), inline images, and sandboxed HTML. Open-file tabs persist per
-  workspace in localStorage.
+  markdown (`marked`), CSV tables (quoted fields, commas, and multiline cells), inline images,
+  and sandboxed HTML. Open-file tabs persist per workspace in localStorage.
 
 The server half registers read-only filesystem routes (`GET /ls`, `/cat`, `/raw`) plus
 mutations (`POST /create`, `/rename`, `/delete`), dispatched by the host at
